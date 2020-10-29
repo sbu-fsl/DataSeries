@@ -22,6 +22,7 @@ PROJECT(DataSeries)
 
 SET(DATASERIES_VERSION 0.0)
 SET(DATASERIES_ABI_VERSION 0)
+SET(CMAKE_CXX_STANDARD 11)
 
 # Set this to the path where the Lintel directory files are located
 # (should help cmake find required includes for different Lintel builds)
