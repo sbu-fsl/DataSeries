@@ -12,6 +12,7 @@
 #include <DataSeries/DSExpr.hpp>
 #include <DataSeries/DStoTextModule.hpp>
 #include <DataSeries/GeneralField.hpp>
+#include <stdio.h>
 
 using namespace std;
 using boost::format;
@@ -25,7 +26,8 @@ DStoTextModule::DStoTextModule(DataSeriesModule &_source,
           text_dest(NULL), print_index(true),
           print_extent_type(true), print_extent_fieldnames(true), 
           csvEnabled(false), separator(" "), 
-          header_only_once(false), header_printed(false)
+          header_only_once(false), header_printed(false),
+          csvOutputEnabled(false), csvOutputDir("")
 {
 }
 
@@ -137,11 +139,21 @@ DStoTextModule::setSeparator(const string &s)
     separator = s;
 }
 
+/* Enable if using --csv or --out-csv */
 void
 DStoTextModule::enableCSV(void)
 {
     csvEnabled = true;
     print_extent_type = false;
+}
+
+
+/* Enable if using --out-csv */
+void
+DStoTextModule::enableCSVOutput(const string &outDir)
+{
+    csvOutputEnabled = true;
+    csvOutputDir = outDir;
 }
 
 void 
@@ -308,6 +320,14 @@ Extent::Ptr DStoTextModule::getSharedExtent() {
     getExtentParseWhereExpr(state);
     getExtentPrintSpecs(state);
     getExtentPrintHeaders(state);
+
+    // if (csvOutputEnabled) {
+    //     string output_path = csvOutputDir + "/" + e->type->getName() + ".csv";
+    //     FILE* f = fopen(output_path.c_str(), "a+");  // Appends if exists, creates if doesn't
+    //     fstream csvOutputStream(f);
+    //     // We need some way to convert an open file descriptor/fstream etc. into a std::ostream
+    //     cout << format("\nFilename would be %s\n") % output_path;
+    // }
 
     for (;state.series.morerecords();++state.series) {
         if (state.where_expr && !state.where_expr->valBool()) {

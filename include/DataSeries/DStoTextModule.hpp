@@ -58,6 +58,7 @@ class DStoTextModule : public DataSeriesModule {
     }
 
     void enableCSV();
+    void enableCSVOutput(const std::string &outDir);
     void setSeparator(const std::string &s);    
     
     void setHeaderOnlyOnce();
@@ -109,6 +110,10 @@ class DStoTextModule : public DataSeriesModule {
     std::string separator; 
     bool header_only_once;
     bool header_printed;
+
+    // For CSV output
+    bool csvOutputEnabled;
+    std::string csvOutputDir;
 };
 
 #endif

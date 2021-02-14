@@ -108,6 +108,9 @@ out the matching row/record.
 #include <DataSeries/TypeIndexModule.hpp>
 #include <DataSeries/DSExpr.hpp>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 using namespace std;
 using boost::format;
 
@@ -130,6 +133,7 @@ main(int argc, char *argv[])
     Extent::setReadChecksFromEnv(true); // ds2txt so slow, may as well check
     string select_extent_type, select_fields;
     string where_extent_type, where_expr_str;
+    string csv_output_dir;
 
     bool skip_types = false;
     while (argc > 2) {
@@ -137,8 +141,28 @@ main(int argc, char *argv[])
             toText.enableCSV();
             toText.setSeparator(",");
             skip_types = true;
-            toText.skipIndex(); 
+            toText.skipIndex();
             toText.skipExtentType();
+        } else if (strncmp(argv[1],"--out-csv",9)==0) {
+            // Initial setup same as --csv
+            toText.enableCSV();
+            toText.setSeparator(",");
+            skip_types = true;
+            toText.skipIndex();
+            toText.skipExtentType();
+
+            // Make sure the specified CSV output directory exists
+            csv_output_dir = argv[2];
+            cout << format("You specified %s\n") % csv_output_dir; // TODO: Remove
+            struct stat output_dir_info;
+            if (stat(csv_output_dir.c_str(), &output_dir_info) != 0) {
+                FATAL_ERROR(format("CSV output directory %s doesn't exist.") % csv_output_dir);
+                return -1;
+            }
+
+            // Additional setup for --out-csv
+            toText.enableCSVOutput(csv_output_dir);
+            eat_args(1, argc, argv);
         } else if (strncmp(argv[1],"--separator=",12)==0) {
             string s = (char *)(argv[1] + 12);
             toText.setSeparator(s);
@@ -158,13 +182,13 @@ main(int argc, char *argv[])
         } else if (strncmp(argv[1],"--fields=",9)==0) {
             toText.setFields(argv[1] + 9);
         } else if (strcmp(argv[1],"--skip-index")==0) {
-            toText.skipIndex(); 
+            toText.skipIndex();
         } else if (strcmp(argv[1],"--skip-types")==0) {
             skip_types = true;
         } else if (strcmp(argv[1],"--skip-extent-type")==0) {
-            toText.skipExtentType(); 
+            toText.skipExtentType();
         } else if (strcmp(argv[1],"--skip-extent-fieldnames")==0) {
-            toText.skipExtentFieldnames(); 
+            toText.skipExtentFieldnames();
         } else if (strcmp(argv[1],"--skip-all")==0) {
             toText.skipIndex();
             toText.skipExtentType();
@@ -197,7 +221,7 @@ main(int argc, char *argv[])
         }
         eat_args(1, argc, argv);
     }
-            
+
     INVARIANT(argc >= 2 && strcmp(argv[1],"-h") != 0 && strcmp(argv[1], "--help") != 0,
               format("Usage: %s [--csv] [--separator=...]\n"
                      "  [--header=...] [--header-only-once]\n"
@@ -220,7 +244,7 @@ main(int argc, char *argv[])
 
     if (select_extent_type != "") {
         string match_extent_type;
-        const ExtentType::Ptr match_type 
+        const ExtentType::Ptr match_type
                 = first_source->getLibrary().getTypeMatchPtr(select_extent_type, false, true);
 
         match_extent_type = match_type->getName();
@@ -249,7 +273,7 @@ main(int argc, char *argv[])
     }
 
     if (where_extent_type != "") {
-        const ExtentType::Ptr match_type 
+        const ExtentType::Ptr match_type
                 = first_source->getLibrary().getTypeMatchPtr(where_extent_type, false, true);
         toText.setWhereExpr(match_type->getName(), where_expr_str);
     }
@@ -261,7 +285,7 @@ main(int argc, char *argv[])
 
     if (skip_types == false) {
         cout << "# Extent Types ...\n";
-        for (ExtentTypeLibrary::NameToType::iterator i 
+        for (ExtentTypeLibrary::NameToType::iterator i
                     = first_source->getLibrary().name_to_type.begin();
             i != first_source->getLibrary().name_to_type.end(); ++i) {
             cout << i->second->getXmlDescriptionString() << "\n";
@@ -279,9 +303,8 @@ main(int argc, char *argv[])
             cout << format("%-13d  %s\n") % offset.val() % extenttype.stringval();
         }
     }
-    
+
     toText.getAndDeleteShared();
-    
+
     return 0;
 }
-
