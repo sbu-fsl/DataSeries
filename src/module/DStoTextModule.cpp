@@ -345,7 +345,9 @@ Extent::Ptr DStoTextModule::getSharedExtent() {
                         *stream_text_dest << separator;
                     }
                 } else {
-                    state.fields[i]->write(text_dest);
+                    if (!(csvOutputEnabled && state.fields[i]->isNull())) {
+                        state.fields[i]->write(text_dest);
+                    }
                     if (i != (state.fields.size() - 1))
                         fputs(separator.c_str(), text_dest);
                 }
