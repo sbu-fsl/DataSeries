@@ -38,7 +38,8 @@ DStoTextModule::DStoTextModule(DataSeriesModule &_source,
           text_dest(_text_dest), print_index(true),
           print_extent_type(true), print_extent_fieldnames(true),
           csvEnabled(false), separator(" "),
-          header_only_once(false), header_printed(false)
+          header_only_once(false), header_printed(false),
+          csvOutputEnabled(false), csvOutputDir("")
 {
 }
 
@@ -314,20 +315,23 @@ Extent::Ptr DStoTextModule::getSharedExtent() {
         return e;
     }
 
+    FILE* original_text_dest = text_dest;
+
     PerTypeState &state = type_to_state[e->type->getName()];
+
+    if (csvOutputEnabled) {
+        string output_path = csvOutputDir + "/" + e->type->getName() + ".csv";
+
+        // Prepare the output file for this extent, appending if it exists,
+        // creating it if it doesn't
+        FILE* f = fopen(output_path.c_str(), "a+");
+        text_dest = f;
+    }
 
     state.series.setExtent(e);
     getExtentParseWhereExpr(state);
     getExtentPrintSpecs(state);
     getExtentPrintHeaders(state);
-
-    // if (csvOutputEnabled) {
-    //     string output_path = csvOutputDir + "/" + e->type->getName() + ".csv";
-    //     FILE* f = fopen(output_path.c_str(), "a+");  // Appends if exists, creates if doesn't
-    //     fstream csvOutputStream(f);
-    //     // We need some way to convert an open file descriptor/fstream etc. into a std::ostream
-    //     cout << format("\nFilename would be %s\n") % output_path;
-    // }
 
     for (;state.series.morerecords();++state.series) {
         if (state.where_expr && !state.where_expr->valBool()) {
@@ -353,6 +357,13 @@ Extent::Ptr DStoTextModule::getSharedExtent() {
             }
         }
     }
+
+    if (csvEnabled) {
+        // Restore the original destination
+        fclose(text_dest);
+        text_dest = original_text_dest;
+    }
+
     return e;
 }
 

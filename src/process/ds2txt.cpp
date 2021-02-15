@@ -153,7 +153,6 @@ main(int argc, char *argv[])
 
             // Make sure the specified CSV output directory exists
             csv_output_dir = argv[2];
-            cout << format("You specified %s\n") % csv_output_dir; // TODO: Remove
             struct stat output_dir_info;
             if (stat(csv_output_dir.c_str(), &output_dir_info) != 0) {
                 FATAL_ERROR(format("CSV output directory %s doesn't exist.") % csv_output_dir);
