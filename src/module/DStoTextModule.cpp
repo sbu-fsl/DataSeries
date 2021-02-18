@@ -320,7 +320,17 @@ Extent::Ptr DStoTextModule::getSharedExtent() {
     PerTypeState &state = type_to_state[e->type->getName()];
 
     if (csvOutputEnabled) {
-        string output_path = csvOutputDir + "/" + e->type->getName() + ".csv";
+        // getName() yields a fully qualified type string delimited by ::
+        // We're only interested in syscall names for our CSV file name
+        // Thus, we keep only the portion of getName() that occurs after the last set of ::
+        string csvFileName = e->type->getName();  // e.g. IOTTAFSL::Trace::Syscall::read
+        string delim = "::";
+        size_t pos;
+        while ((pos = csvFileName.find(delim)) != string::npos) {
+            csvFileName.erase(0, pos + delim.length());
+        }
+
+        string output_path = csvOutputDir + "/" + csvFileName + ".csv";
 
         // Prepare the output file for this extent, appending if it exists,
         // creating it if it doesn't
