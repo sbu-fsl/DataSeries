@@ -57,7 +57,8 @@ class DStoTextModule : public DataSeriesModule {
         print_extent_fieldnames = false;
     }
 
-    void enableCSV();
+    void enableCSV();  // Used by legacy --csv in ds2txt
+    void writeToCSV(const std::string &inputFile, const std::string &outDir);
     void setSeparator(const std::string &s);    
     
     void setHeaderOnlyOnce();
@@ -109,6 +110,10 @@ class DStoTextModule : public DataSeriesModule {
     std::string separator; 
     bool header_only_once;
     bool header_printed;
+
+    // For CSV output
+    bool csvOutputEnabled;
+    std::string csvOutputDir;
 };
 
 #endif

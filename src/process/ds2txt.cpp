@@ -108,6 +108,11 @@ out the matching row/record.
 #include <DataSeries/TypeIndexModule.hpp>
 #include <DataSeries/DSExpr.hpp>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <dirent.h>
+
 using namespace std;
 using boost::format;
 
@@ -133,11 +138,12 @@ main(int argc, char *argv[])
 
     bool skip_types = false;
     while (argc > 2) {
+        // Legacy CSV feature: use ds2csv instead
         if (strncmp(argv[1],"--csv",5)==0) {
             toText.enableCSV();
             toText.setSeparator(",");
             skip_types = true;
-            toText.skipIndex(); 
+            toText.skipIndex();
             toText.skipExtentType();
         } else if (strncmp(argv[1],"--separator=",12)==0) {
             string s = (char *)(argv[1] + 12);
@@ -158,13 +164,13 @@ main(int argc, char *argv[])
         } else if (strncmp(argv[1],"--fields=",9)==0) {
             toText.setFields(argv[1] + 9);
         } else if (strcmp(argv[1],"--skip-index")==0) {
-            toText.skipIndex(); 
+            toText.skipIndex();
         } else if (strcmp(argv[1],"--skip-types")==0) {
             skip_types = true;
         } else if (strcmp(argv[1],"--skip-extent-type")==0) {
-            toText.skipExtentType(); 
+            toText.skipExtentType();
         } else if (strcmp(argv[1],"--skip-extent-fieldnames")==0) {
-            toText.skipExtentFieldnames(); 
+            toText.skipExtentFieldnames();
         } else if (strcmp(argv[1],"--skip-all")==0) {
             toText.skipIndex();
             toText.skipExtentType();
@@ -197,10 +203,10 @@ main(int argc, char *argv[])
         }
         eat_args(1, argc, argv);
     }
-            
+
     INVARIANT(argc >= 2 && strcmp(argv[1],"-h") != 0 && strcmp(argv[1], "--help") != 0,
-              format("Usage: %s [--csv] [--separator=...]\n"
-                     "  [--header=...] [--header-only-once]\n"
+              format("Usage: %s [--csv]\n"
+                     "  [--separator=...] [--header=...] [--header-only-once]\n"
                      "  [--select '*'|'extent-type-match' '*'|'field,field,field']\n"
                      "  [--printSpec='type=\"...\" name=\"...\" print_format=\"...\" [units=\"...\" epoch=\"...\"]']\n"
                      // put in the <printSpec ... /> version into man page
@@ -212,6 +218,7 @@ main(int argc, char *argv[])
                      "  <file...>\n"
                      "\n%s\n")
               % argv[0] % DSExpr::usage());
+
     for (int i=1;i<argc;++i) {
         source.addSource(argv[i]);
     }
@@ -220,7 +227,7 @@ main(int argc, char *argv[])
 
     if (select_extent_type != "") {
         string match_extent_type;
-        const ExtentType::Ptr match_type 
+        const ExtentType::Ptr match_type
                 = first_source->getLibrary().getTypeMatchPtr(select_extent_type, false, true);
 
         match_extent_type = match_type->getName();
@@ -249,7 +256,7 @@ main(int argc, char *argv[])
     }
 
     if (where_extent_type != "") {
-        const ExtentType::Ptr match_type 
+        const ExtentType::Ptr match_type
                 = first_source->getLibrary().getTypeMatchPtr(where_extent_type, false, true);
         toText.setWhereExpr(match_type->getName(), where_expr_str);
     }
@@ -261,7 +268,7 @@ main(int argc, char *argv[])
 
     if (skip_types == false) {
         cout << "# Extent Types ...\n";
-        for (ExtentTypeLibrary::NameToType::iterator i 
+        for (ExtentTypeLibrary::NameToType::iterator i
                     = first_source->getLibrary().name_to_type.begin();
             i != first_source->getLibrary().name_to_type.end(); ++i) {
             cout << i->second->getXmlDescriptionString() << "\n";
@@ -279,9 +286,8 @@ main(int argc, char *argv[])
             cout << format("%-13d  %s\n") % offset.val() % extenttype.stringval();
         }
     }
-    
+
     toText.getAndDeleteShared();
-    
+
     return 0;
 }
-

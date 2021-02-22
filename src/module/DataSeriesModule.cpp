@@ -12,6 +12,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
+#include <iostream>
 
 #define DS_RAW_EXTENT_PTR_DEPRECATED /* allowed */
 #define DSM_VAR_DEPRECATED /* allowed */
@@ -70,6 +71,19 @@ void DataSeriesModule::getAndDeleteShared() {
     do {
         e = getSharedExtent();
     } while (e != NULL);
+}
+
+std::vector<Extent::Ptr> DataSeriesModule::getAllExtents() {
+    std::vector<Extent::Ptr> all_extents;
+    Extent::Ptr e;
+    while (true) {
+        e = getSharedExtent();
+        if (NULL == e) {
+            break;
+        }
+        all_extents.push_back(e);
+    }
+    return all_extents;
 }
 
 SourceModule::SourceModule()

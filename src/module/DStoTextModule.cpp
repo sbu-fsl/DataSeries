@@ -12,6 +12,7 @@
 #include <DataSeries/DSExpr.hpp>
 #include <DataSeries/DStoTextModule.hpp>
 #include <DataSeries/GeneralField.hpp>
+#include <stdio.h>
 
 using namespace std;
 using boost::format;
@@ -137,6 +138,7 @@ DStoTextModule::setSeparator(const string &s)
     separator = s;
 }
 
+/* Enable if using --csv */
 void
 DStoTextModule::enableCSV(void)
 {
@@ -288,7 +290,6 @@ DStoTextModule::getExtentPrintHeaders(PerTypeState &state)
 }
 
 
-
 Extent::Ptr DStoTextModule::getSharedExtent() {
     Extent::Ptr e = source.getSharedExtent();
     if (e == NULL) {
@@ -302,7 +303,28 @@ Extent::Ptr DStoTextModule::getSharedExtent() {
         return e;
     }
 
+    FILE* original_text_dest = text_dest;
+
     PerTypeState &state = type_to_state[e->type->getName()];
+
+    if (csvOutputEnabled) {
+        // getName() yields a fully qualified type string delimited by ::
+        // We're only interested in syscall names for our CSV file name
+        // Thus, we keep only the portion of getName() that occurs after the last set of ::
+        string csvFileName = e->type->getName();  // e.g. IOTTAFSL::Trace::Syscall::read
+        string delim = "::";
+        size_t pos;
+        while ((pos = csvFileName.find(delim)) != string::npos) {
+            csvFileName.erase(0, pos + delim.length());
+        }
+
+        string output_path = csvOutputDir + "/" + csvFileName + ".csv";
+
+        // Prepare the output file for this extent, appending if it exists,
+        // creating it if it doesn't
+        FILE* f = fopen(output_path.c_str(), "a+");
+        text_dest = f;
+    }
 
     state.series.setExtent(e);
     getExtentParseWhereExpr(state);
@@ -321,7 +343,9 @@ Extent::Ptr DStoTextModule::getSharedExtent() {
                         *stream_text_dest << separator;
                     }
                 } else {
-                    state.fields[i]->write(text_dest);
+                    if (!(csvOutputEnabled && state.fields[i]->isNull())) {
+                        state.fields[i]->write(text_dest);
+                    }
                     if (i != (state.fields.size() - 1))
                         fputs(separator.c_str(), text_dest);
                 }
@@ -333,6 +357,13 @@ Extent::Ptr DStoTextModule::getSharedExtent() {
             }
         }
     }
+
+    if (csvEnabled) {
+        // Restore the original destination
+        fclose(text_dest);
+        text_dest = original_text_dest;
+    }
+
     return e;
 }
 
@@ -352,4 +383,94 @@ DStoTextModule::parseXML(string xml, const string &roottype)
               format("Error: %s has wrong type") % roottype);
     return cur;
 }
+
+
+// CSV Things below here
     
+
+
+
+// SecNano (or something like that) getSmallestTimeFieldValue(vector<Extent::Ptr> all_extents) {
+//     for (size_t i=0; i<all_extents.size(); ++i) {
+//         Extent::Ptr e = all_extents[i];
+//         PerTypeState &state = type_to_state[e->type->getName()];
+//         state.series.setExtent(e);
+//         for (; state.series.morerecords(); ++state.series) {
+//             if (!(state.where_expr && !state.where_expr->valBool())) {
+//                 for (unsigned int i=0; i<state.fields.size(); i++) {
+//                     if (instanceof<Int64TimeField>(state.fields[i])) {
+                        
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
+
+
+string getExtentCSVFilename(Extent::Ptr e) {
+    // getName() yields a fully qualified type string delimited by ::
+    // We're only interested in syscall names for our CSV file name
+    // Thus, we keep only the portion of getName() that occurs after the last set of ::
+    string retval = e->type->getName();  // e.g. IOTTAFSL::Trace::Syscall::read
+    string delim = "::";
+    size_t pos;
+    while ((pos = retval.find(delim)) != string::npos) {
+        retval.erase(0, pos + delim.length());
+    }
+    return retval + ".csv";
+}
+
+// inline bool instanceof(const T*) {
+//    return is_base_of<Base, T>::value;
+// }
+
+void DStoTextModule::writeToCSV(const string &inputFile, const string &outDir) {
+    vector<Extent::Ptr> all_extents = source.getAllExtents();
+
+    for (size_t i=0; i<all_extents.size(); ++i) {
+        Extent::Ptr e = all_extents[i];
+
+        FILE* original_text_dest = text_dest;
+        PerTypeState &state = type_to_state[e->type->getName()];
+        string csvFilename = getExtentCSVFilename(e);
+        string output_path = outDir + "/" + csvFilename;
+
+        // Prepare the output file for this extent, appending if it exists,
+        // creating it if it doesn't
+        FILE* f = fopen(output_path.c_str(), "a+");
+        text_dest = f;
+
+        state.series.setExtent(e);
+        getExtentParseWhereExpr(state);
+        getExtentPrintSpecs(state);
+        getExtentPrintHeaders(state);
+
+        for (;state.series.morerecords();++state.series) {
+            if (state.where_expr && !state.where_expr->valBool()) {
+                ++ignored_rows;
+            } else {
+                ++processed_rows;
+                for (unsigned int i=0;i<state.fields.size();i++) {
+                    // if (instanceof<Int64TimeField>(state.fields[i])) {
+                    //     puts("We found a time fieldfdsa")
+                    // }
+                    if (!state.fields[i]->isNull()) {
+                        state.fields[i]->write(text_dest);
+                    }
+                    if (i != (state.fields.size() - 1)) {
+                        fputs(",", text_dest);
+                    }
+                }
+                if (text_dest == NULL) {
+                    *stream_text_dest << "\n";
+                } else {
+                    fputs("\n", text_dest);
+                }
+            }
+        }
+
+        fclose(text_dest);
+        text_dest = original_text_dest;
+    }
+}
