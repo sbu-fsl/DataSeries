@@ -136,35 +136,15 @@ main(int argc, char *argv[])
     string select_extent_type, select_fields;
     string where_extent_type, where_expr_str;
 
-    // For new CSV output feature
-    bool enable_CSV_output = false;
-    string csv_output_dir;  // Name of CSV dump's container dir; defaults to argv[1]
-
     bool skip_types = false;
     while (argc > 2) {
-        // Legacy CSV feature: Output CSV to stdout
-        // Omits information about extent output; use --out-csv instead
+        // Legacy CSV feature: use ds2csv instead
         if (strncmp(argv[1],"--csv",5)==0) {
             toText.enableCSV();
             toText.setSeparator(",");
             skip_types = true;
             toText.skipIndex();
             toText.skipExtentType();
-        // Use --out-csv-name with --out-csv to customize CSV output directory name
-        } else if (strncmp(argv[1],"--out-csv-name",14)==0){
-            csv_output_dir = argv[2];
-            eat_args(1, argc, argv);
-        // New CSV feature: Dump CSV to dir argv[1] (without the .ds extension)
-        // Each extent will have its own file in the output directory
-        // Customize output dir name with --out-csv-name <name> option
-        } else if (strncmp(argv[1],"--out-csv",9)==0) {
-            // Initial setup same as --csv
-            toText.enableCSV();
-            toText.setSeparator(",");
-            skip_types = true;
-            toText.skipIndex();
-            toText.skipExtentType();
-            enable_CSV_output = true;  // Remember we want to create CSV output
         } else if (strncmp(argv[1],"--separator=",12)==0) {
             string s = (char *)(argv[1] + 12);
             toText.setSeparator(s);
@@ -225,7 +205,7 @@ main(int argc, char *argv[])
     }
 
     INVARIANT(argc >= 2 && strcmp(argv[1],"-h") != 0 && strcmp(argv[1], "--help") != 0,
-              format("Usage: %s [--csv] [--out-csv] [--out-csv-name name]\n"
+              format("Usage: %s [--csv]\n"
                      "  [--separator=...] [--header=...] [--header-only-once]\n"
                      "  [--select '*'|'extent-type-match' '*'|'field,field,field']\n"
                      "  [--printSpec='type=\"...\" name=\"...\" print_format=\"...\" [units=\"...\" epoch=\"...\"]']\n"
@@ -238,24 +218,6 @@ main(int argc, char *argv[])
                      "  <file...>\n"
                      "\n%s\n")
               % argv[0] % DSExpr::usage());
-
-    if (enable_CSV_output) {
-        // CSV output directory name defaults to argv[1]
-        if (csv_output_dir.empty()) {
-            csv_output_dir = argv[1];
-            csv_output_dir += "_csv";
-        }
-
-        // Create CSV output directory if it doesn't exist
-        struct stat output_dir_info;
-        if (0 != stat(csv_output_dir.c_str(), &output_dir_info)) {
-            if (0 != mkdir(csv_output_dir.c_str(), S_IRWXO | S_IRWXG | S_IRWXU)) {
-                perror("mkdir");
-                return -1;
-            }
-        }
-        toText.enableCSVOutput(csv_output_dir);
-    }
 
     for (int i=1;i<argc;++i) {
         source.addSource(argv[i]);

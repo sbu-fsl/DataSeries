@@ -95,6 +95,8 @@ class DataSeriesModule : boost::noncopyable {
 
     /** get all the extents from module and delete them via the getExtentShared() interface. */
     void getAndDeleteShared();
+
+    std::vector<Extent::Ptr> getAllExtents();
 };
 
 /** \brief Base class for source modules that keeps statistics about
