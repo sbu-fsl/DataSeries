@@ -51,10 +51,10 @@ class Int64TimeField : protected Int64Field {
     /// floor(t/1.0e9), and nanoseconds = t - seconds * 1e9.  This
     /// means that -.1s is representated as (-1, 900 * 1000 * 1000).
     struct SecNano {
-        int32_t seconds;
+        int64_t seconds;
         uint32_t nanoseconds;
         SecNano() : seconds(0), nanoseconds(0) { }
-        SecNano(int32_t a, uint32_t b)
+        SecNano(int64_t a, uint32_t b)
                 : seconds(a), nanoseconds(b) { }
         bool operator ==(const SecNano &b) const {
             return seconds == b.seconds && nanoseconds == b.nanoseconds;
