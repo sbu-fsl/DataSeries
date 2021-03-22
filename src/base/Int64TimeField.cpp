@@ -306,7 +306,9 @@ Int64TimeField::TimeType Int64TimeField::convertUnitsEpoch(const std::string &un
     if (epoch != str_unix && unknown_return_ok) {
         return Unknown;
     }
-    INVARIANT(epoch == str_unix || epoch == str_unknown,
+
+    // If no epoch is specified, assume unix epoch
+    INVARIANT(epoch == str_unix || epoch == "" || epoch == str_unknown,
               format("only handle unix epoch, not '%s' for field %s")
               % epoch % field_name);
     if (units == str_tfrac_seconds) {
