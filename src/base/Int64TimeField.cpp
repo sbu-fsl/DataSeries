@@ -235,10 +235,10 @@ void Int64TimeField::splitSecNano(int64_t isecnano, SecNano &osecnano) {
         tmp -= 1;
         SINVARIANT(tmp*1000*1000*1000 < isecnano);
     }
-    SINVARIANT(tmp >= numeric_limits<int32_t>::min() &&
-               tmp <= numeric_limits<int32_t>::max());
-    osecnano.seconds = static_cast<int32_t>(tmp);
-    int64_t tmp2 = isecnano - static_cast<int64_t>(tmp) * 1000 * 1000 * 1000;
+    SINVARIANT(tmp >= numeric_limits<int64_t>::min() &&
+               tmp <= numeric_limits<int64_t>::max());
+    osecnano.seconds = tmp;
+    int64_t tmp2 = isecnano - tmp * 1000 * 1000 * 1000;
     SINVARIANT(tmp2 >= 0 && tmp2 <= 999999999);
     osecnano.nanoseconds = static_cast<uint32_t>(tmp2);
 }
@@ -249,10 +249,10 @@ void Int64TimeField::splitSecMicro(int64_t isecmicro, SecNano &osecnano) {
         tmp -= 1;
         SINVARIANT(tmp*1000*1000 < isecmicro);
     }
-    SINVARIANT(tmp >= numeric_limits<int32_t>::min() &&
-               tmp <= numeric_limits<int32_t>::max());
-    osecnano.seconds = static_cast<int32_t>(tmp);
-    int64_t tmp2 = isecmicro - static_cast<int64_t>(tmp) * 1000 * 1000;
+    SINVARIANT(tmp >= numeric_limits<int64_t>::min() &&
+               tmp <= numeric_limits<int64_t>::max());
+    osecnano.seconds = tmp;
+    int64_t tmp2 = isecmicro - tmp * 1000 * 1000;
     SINVARIANT(tmp2 >= 0 && tmp2 <= 999999);
     osecnano.nanoseconds = static_cast<uint32_t>(tmp2) * 1000;
 }
@@ -306,7 +306,9 @@ Int64TimeField::TimeType Int64TimeField::convertUnitsEpoch(const std::string &un
     if (epoch != str_unix && unknown_return_ok) {
         return Unknown;
     }
-    INVARIANT(epoch == str_unix || epoch == str_unknown,
+
+    // If no epoch is specified, assume unix epoch
+    INVARIANT(epoch == str_unix || epoch == "" || epoch == str_unknown,
               format("only handle unix epoch, not '%s' for field %s")
               % epoch % field_name);
     if (units == str_tfrac_seconds) {
